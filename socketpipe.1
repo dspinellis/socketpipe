@@ -1,4 +1,4 @@
-.TH SOCKETPIPE 1 "27 July 2003"
+.TH SOCKETPIPE 1 "1 September 2003"
 .\" 
 .\" (C) Copyright 2003 Diomidis Spinellis.  All rights reserved.
 .\" 
@@ -12,12 +12,13 @@
 .\" WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
 .\" MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 .\"
-.\" $Id: socketpipe.1,v 1.3 2003/08/29 16:46:30 dds Exp $
+.\" $Id: socketpipe.1,v 1.4 2003/09/01 11:00:44 dds Exp $
 .\"
 .SH NAME
 socketpipe \- zero overhead remote process plumbing
 .SH SYNOPSIS
 \fBsocketpipe\fP 
+[\fB\-b\fP]
 [\fB\-i\fP \fB{\fP \fIinput generation command\fP [\fIargs\fP ... ] \fB}\fP ]
 \fB\-l\fP \fB{\fP \fIlogin command\fP [\fIargs\fP ... ] \fB}\fP
 \fB\-r\fP \fB{\fP \fIremote command\fP [\fIargs\fP ... ] \fB}\fP
@@ -58,22 +59,71 @@ through \fIsocketpipe\fP's data channel is not protected;
 (The authentication process uses the protocol of the underlying login
 program and is no more or less vulnerable than using the program in isolation;
 \fIssh\fP(1) remains secure, \fIrsh\fP(1) continues to be insecure.)
+.SH OPTIONS
+.IP "\fB\-l\fP \fB{\fP \fIlogin command\fP [\fIargs\fP ... ] \fB}\fP"
+Specify the remote login command (see previous section).
+Use arguments to this command to specify the host and authentication
+options (e.g. username).
+The remote login command should accept as further arguments a command and its
+arguments and execute it on the remote host.
+The remote login command is used to execute a server instance of
+\fIsocketpipe\fP on the remote host.
+Typical examples of remote login commands are \fIssh(1)\fP and \fIrsh(1)\fP.
+
+.IP "\fB\-r\fP \fB{\fP \fIremote command\fP [\fIargs\fP ... ] \fB}\fP"
+Specify the remote processing command (see previous section).
+The remote processing command is executed on the remote machine
+with its input, output, or both redirected for processing to local commands.
+
+.IP "\fB\-i\fP \fB{\fP \fIinput generation command\fP [\fIargs\fP ... ] \fB}\fP"
+Specify the remote input generation command (see previous section).
+The output of the input generation command is redirected as input
+to the remote command.
+
+.IP "\fB\-o\fP \fB{\fP \fIoutput processing command\fP [\fIargs\fP ... ] \fB}\fP"
+Specify the output processing command (see previous section).
+The output of the remote command is redirected as input
+to the output processing command.
+
+.IP "\fB\-b\fP"
+Execute the remote login command in batch mode.
+This option should be used when no interaction is needed for authentication
+purposes with the remote login command.
+This is for example the case when user authentication is performed by means of
+private keys (\fIssh(1)\fP) or
+(horror) the \fI.rhosts(5)\fP file (\fIrsh(1)\fP).
+The option circumvents
+two problems in OpenSSH_3.5p1 (and possibly also other remote login commands):
+the setting of our (shared) output to non-blocking I/O and attempts to
+read from the standard input.
+The first problem may manifest itself through an error message 
+of the output processing command such as 
+"stdout: Resource temporarily unavailable".
+The second problem will not allow you to put \fIsocketpipe\fP instances
+in the background, stopping them with a tty input signal (SIGTTIN).
+The \fB-b\fP option will close the remote login command's
+standard output and redirect 
+its standard input from /dev/null solving those problems.
+On the other hand this flag will disable I/O to/from the remote login
+command and may therefore interfere with any interaction required
+for the authentication process.
+
 .SH EXAMPLE
 .PP
 .ft C
-socketpipe -i { tar cf - / } -l { ssh remotehost } -r { dd of=/dev/st0 bs=32k }
+socketpipe -b -i { tar cf - / } -l { ssh remotehost } -r { dd of=/dev/st0 bs=32k }
 .ft P
 .br
 Backup the local host on a tape drive located on \fIremotehost\fP.
 .PP
 .ft C
-socketpipe -l { ssh remotehost } -r { dd if=/dev/st0 bs=32k } -o { tar xpf - /home/luser }
+socketpipe -b -l { ssh remotehost } -r { dd if=/dev/st0 bs=32k } -o { tar xpf - /home/luser }
 .ft P
 .br
-Restore a directory using the tape driver on the remote host.
+Restore a directory using the tape drive on the remote host.
 .PP
 .ft C
-socketpipe -i { tar cf - / } -l { ssh remotehost } -r { bzip2 -c } -o { dd of=/dev/st0 bs=32k }
+socketpipe -b -i { tar cf - / } -l { ssh remotehost } -r { bzip2 -c } -o { dd of=/dev/st0 bs=32k }
 .ft P
 .br
 Backup the local disk on a local tape, compressing the data on the 
@@ -82,3 +132,15 @@ Backup the local disk on a local tape, compressing the data on the
 \fItcpcat\fP(1), \fIzsh\fP(1)
 .SH AUTHOR
 Diomidis Spinellis -- <http://www.spinellis.gr>
+.SH BUGS
+The sockets used to connect the local and remote commands may read or write
+only parts of the data specified in a \fIread(2)\fP or \fIwrite(2)\fP operation.
+Although this is standard behavior, and is for example correctly handled by
+the \fIstdio(3)\fP library, some commands may not expect it
+and may exhibit strange bugs.
+Most examples in Stevens's 
+"\fIAdvanced Programming in the UNIX Environment\fP" 
+(Addison-Wesley 1992) would fail reading from sockets;
+on the other hand Section 6.6 of Stevens's
+"\fIUNIX Network Programming\fP" (Prentice Hall 1990)
+provides code that deals with this problem.

@@ -11,7 +11,7 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $Id: socketpipe.c,v 1.4 2003/09/01 07:48:29 dds Exp $
+ * $Id: socketpipe.c,v 1.5 2003/09/01 11:00:44 dds Exp $
  *
  */
 
@@ -21,6 +21,7 @@
 #include <stdarg.h>
 #include <limits.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <errno.h>
 #include <netdb.h>
 #include <sys/types.h>
@@ -36,7 +37,7 @@ static void
 usage(const char *msg)
 {
 	fprintf(stderr, "%s: %s\n", progname, msg);
-	fprintf(stderr, "usage:\t%s [-i|o|r|l { command [args ...] }]\n", progname);
+	fprintf(stderr, "usage:\t%s [-b] [-i|o|r|l { command [args ...] }]\n", progname);
 	fprintf(stderr, "\t(must specify a -l and a -r command and at least one of -i or -o)\n");
 #ifdef DEBUG
 	fprintf(stderr, "\t%s -s host port command [args ...]\n", progname);
@@ -75,6 +76,7 @@ xmalloc(size_t n)
 
 /* Program argument vectors */
 static char **inputv, **outputv, **remotev, **loginv;
+static int batch = 0;
 
 /*
  * Set the input, output, remote, and login vectors based on
@@ -87,7 +89,7 @@ parse_arguments(char *argv[])
 	char ***result;
 	int nest;
 	
-	for (p = argv + 1; *p;) {
+	for (p = argv + 1; *p; p++) {
 		/* Require a single character option */
 		if (p[0][0] != '-' || !p[0][1] || p[0][2])
 			usage("single character option expected");
@@ -96,6 +98,7 @@ parse_arguments(char *argv[])
 		case 'o': result = &outputv; break;
 		case 'r': result = &remotev; break;
 		case 'l': result = &loginv; break;
+		case 'b': batch = 1; continue;
 		default: usage("invalid option");
 		}
 		if (!*++p || strcmp(*p, "{"))
@@ -118,7 +121,6 @@ parse_arguments(char *argv[])
 		*result = (char **)xmalloc(sizeof(char *) * (p - start + 1));
 		memcpy(*result, start, sizeof(char *) * (p - start));
 		(*result)[p - start] = NULL;
-		p++;
 	}
 }
 
@@ -204,11 +206,27 @@ client(char *argv[])
 		break;
 	case 0:
 		/* Child; remotely execute the command specified */
-		/* 
-		 * ssh messes with stdout converting the parent end
-		 * to non-blocking I/O.  We therefore close it here.
-		 */
-                close(STDOUT_FILENO);
+		if (batch) {
+			int nullfd;
+			/* 
+			 * These fix kown problems for OpenSSH_3.5p1 
+			 * Other login methods may have similar problems
+			 */
+			/* 
+			 * ssh messes with stdout converting the parent end
+			 * to non-blocking I/O.  We therefore close it here.
+			 */
+			close(STDOUT_FILENO);
+			/*
+			 * ssh insists on reading from stdin, so we redirect
+			 * it to /dev/null
+			 */
+			if ((nullfd = open("/dev/null", O_RDWR, 0)) != -1) {
+				(void)dup2(nullfd, STDIN_FILENO);
+				if (nullfd > 2)
+					(void)close(nullfd);
+			}
+		}
 		close(sockfd);
 		if (execvp(rloginv[0], rloginv) < 0)
 			fatal("execution of %s failed: %s", rloginv[0], strerror(errno));
