@@ -11,7 +11,7 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $Id: socketpipe.c,v 1.2 2003/08/15 20:04:43 dds Exp $
+ * $Id: socketpipe.c,v 1.3 2003/08/27 14:10:33 dds Exp $
  *
  */
 
@@ -174,7 +174,7 @@ client(char *argv[])
 	snprintf(portname, sizeof(portname), "%d", ntohs(loc_addr.sin_port));
 
 	/* Merge loginv and remotev into rloginv */
-	count = 4;		/* ... netpipe -s host port ... */
+	count = 4;		/* ... socketpipe -s host port ... */
 	for (p = loginv; *p; p++)
 		count++;
 	for (p = remotev; *p; p++)
@@ -182,7 +182,7 @@ client(char *argv[])
 	rp = rloginv = (char **)xmalloc(sizeof(char *) * (count + 1));
 	for (p = loginv; *p; p++)
 		*rp++ = *p;
-	*rp++ = "netpipe";
+	*rp++ = "socketpipe";
 	*rp++ = "-s";
 	*rp++ = hostname;
 	*rp++ = portname;
