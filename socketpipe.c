@@ -11,7 +11,7 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $Id: socketpipe.c,v 1.1 2003/07/26 21:34:29 dds Exp $
+ * $Id: socketpipe.c,v 1.2 2003/08/15 20:04:43 dds Exp $
  *
  */
 
@@ -204,6 +204,11 @@ client(char *argv[])
 		break;
 	case 0:
 		/* Child; remotely execute the command specified */
+		/* 
+		 * ssh messes with stdout converting the parent end
+		 * to non-blocking I/O.  We therefore close it here.
+		 */
+                close(STDOUT_FILENO);
 		close(sockfd);
 		if (execvp(rloginv[0], rloginv) < 0)
 			fatal("execution of %s failed: %s", rloginv[0], strerror(errno));
