@@ -12,18 +12,18 @@
 .\" WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
 .\" MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 .\"
-.\" $Id: socketpipe.1,v 1.1 2003/07/26 21:34:29 dds Exp $
+.\" $Id: socketpipe.1,v 1.2 2003/08/29 15:41:04 dds Exp $
 .\"
 .SH NAME
-netpipe \- zero overhead remote process plumbing
+socketpipe \- zero overhead remote process plumbing
 .SH SYNOPSIS
-\fBnetpipe\fP 
+\fBsocketpipe\fP 
 [\fB\-i\fP \fB{\fP \fIinput generation command\fP [\fIargs\fP ... ] \fB}\fP ]
 \fB\-l\fP \fB{\fP \fIlogin command\fP [\fIargs\fP ... ] \fB}\fP
 \fB\-r\fP \fB{\fP \fIremote command\fP [\fIargs\fP ... ] \fB}\fP
 [\fB\-o\fP \fB{\fP \fIoutput processing command\fP [\fIargs\fP ... ] \fB}\fP ]
 .SH DESCRIPTION
-\fINetpipe\fP 
+\fISocketpipe\fP 
 connects over a TCP/IP socket the \fIremote command\fP specified
 to the local \fIinput generation command\fP and/or the local
 \fIoutput processing command\fP.
@@ -34,46 +34,46 @@ redirected so that the remote command's input will come from the local
 be sent to the local \fIoutput processing command\fP.
 The remote command is executed on the machine accessed through
 the \fIlogin command\fP.
-The \fInetpipe\fP executable should be available through the execution path
+The \fIsocketpipe\fP executable should be available through the execution path
 in the remote machine.
 The braces used for delimiting the commands and their arguments should
 be space-separated and can be nested.
 This feature allows you to setup complex and efficient topologies of
 distributed communicating processes.
 .PP
-Although the initial \fInetpipe\fP communication setup is performed through
+Although the initial \fIsocketpipe\fP communication setup is performed through
 client-server intermediaries such as \fIssh(1)\fP or \fIrsh(1)\fP,
-the communication channel that \fInetpipe\fP establishes is a direct
+the communication channel that \fIsocketpipe\fP establishes is a direct
 socket connection between the local and the remote commands.
-Without the use of \fInetpipe\fP,
+Without the use of \fIsocketpipe\fP,
 when piping remote data through \fIssh(1)\fP or \fIrsh(1)\fP,
 each data block is read at the local end by the respective client,
 is sent to the remote daemon and written out again to the remote process.
-The use of \fInetpipe\fP removes the inefficiency of the multiple 
+The use of \fIsocketpipe\fP removes the inefficiency of the multiple 
 data copies and context switches and can in some cases provide dramatic
 throughput improvements.
 On the other hand, the confidentiality and integrity of the data passing 
-through \fInetpipe\fP's data channel is not protected;
-\fInetpipe\fP should therefore be used only within a confined LAN environment.
+through \fIsocketpipe\fP's data channel is not protected;
+\fIsocketpipe\fP should therefore be used only within a confined LAN environment.
 (The authentication process uses the protocol of the underlying login
 program and is no more or less vulnerable than using the program in isolation;
 \fIssh\fP(1) remains secure, \fIrsh\fP(1) continues to be insecure.)
 .SH EXAMPLE
 .PP
 .ft C
-netpipe -i { tar cf - / } -l { ssh remotehost } -r { dd of=/dev/st0 bs=32k }
+socketpipe -i { tar cf - / } -l { ssh remotehost } -r { dd of=/dev/st0 bs=32k }
 .ft P
 .br
 Backup the local host on a tape drive located on \fIremotehost\fP.
 .PP
 .ft C
-netpipe -l { ssh remotehost } -r { dd if=/dev/st0 bs=32k } -o { tar xpf - /home/luser }
+socketpipe -l { ssh remotehost } -r { dd if=/dev/st0 bs=32k } -o { tar xpf - /home/luser }
 .ft P
 .br
 Restore a directory using the tape driver on the remote host.
 .PP
 .ft C
-netpipe -i { tar cf - / } -l { ssh remotehost } -r { bzip2 -c } -o { dd of=/dev/st0 bs=32k }
+socketpipe -i { tar cf - / } -l { ssh remotehost } -r { bzip2 -c } -o { dd of=/dev/st0 bs=32k }
 .ft P
 .br
 Backup the local disk on a local tape, compressing the data on the 
