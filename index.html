@@ -1,0 +1,88 @@
+<!doctype html public "-//IETF//DTD HTML//EN">
+<HTML>
+<HEAD>
+<TITLE>socketpipe</TITLE>
+<META NAME="AUTHOR" CONTENT="Diomidis Spinellis">
+</HEAD>
+<BODY>
+<h1 align=right><tt><font color="#ff0000">socketpipe dds</font></tt></h1>
+<img src="socketpipe.jpg" ALT="An RJ-45 plug coming out of a pipe"><br>
+<h2>Socketpipe</h2>
+
+<em>Socketpipe</em>
+connects over a TCP/IP socket a <em>remote command</em> specified
+to a local <em>input generation command</em> and/or a local
+<em>output processing command</em>.
+The input and output of the <em>remote command</em> are appropriately
+redirected so that the remote command's input will come from the local
+<em>input generation command</em> and the remote command's output will
+be sent to the local <em>output processing command</em>.
+The remote command is executed on the machine accessed through
+the <em>login command</em>.
+The <em>socketpipe</em> executable should be available through the execution path
+in the remote machine.
+The braces used for delimiting the commands and their arguments should
+be space-separated and can be nested.
+This feature allows you to setup complex and efficient topologies of
+distributed communicating processes.
+<p>
+Although the initial <em>socketpipe</em> communication setup is performed through
+client-server intermediaries such as <em>ssh(1)</em> or <em>rsh(1)</em>,
+the communication channel that <em>socketpipe</em> establishes is a direct
+socket connection between the local and the remote commands.
+Without the use of <em>socketpipe</em>,
+when piping remote data through <em>ssh(1)</em> or <em>rsh(1)</em>,
+each data block is read at the local end by the respective client,
+is sent to the remote daemon and written out again to the remote process.
+The use of <em>socketpipe</em> removes the inefficiency of the multiple
+data copies and context switches and can in some cases provide dramatic
+throughput improvements.
+On the other hand, the confidentiality and integrity of the data passing
+through <em>socketpipe</em>'s data channel is not protected;
+<em>socketpipe</em> should therefore be used only within a confined LAN environment.
+(The authentication process uses the protocol of the underlying login
+program and is no more or less vulnerable than using the program in isolation;
+<em>ssh</em>(1) remains secure, <em>rsh</em>(1) continues to be insecure.)
+<h3>Examples</h3>
+<pre>
+socketpipe -i { tar cf - / } -l { ssh remotehost } -r { dd of=/dev/st0 bs=32k }
+</pre>
+Backup the local host on a tape drive located on <em>remotehost</em>.
+<pre>
+socketpipe -l { ssh remotehost } -r { dd if=/dev/st0 bs=32k } -o { tar xpf - /home/luser }
+</pre>
+Restore a directory using the tape driver on the remote host.
+<pre>
+socketpipe -i { tar cf - / } -l { ssh remotehost } -r { bzip2 -c } -o { dd of=/dev/st0 bs=32k }
+</pre>
+Backup the local disk on a local tape, compressing the data on the
+(presumably a lot more powerful) <em>remotehost</em>.
+<p>
+
+<h3>Download</h3>
+The current <em>socketpipe</em> version is VERSION.
+The following pages do not contain navigation links.
+Following a link will open a new browser window.
+<ul>
+<li><a href="socketpipe-VERSION.tar.gz" target="NEW">Source and documentation tarball (.tar.gz)</a>
+<li><a href="socketpipe.c" target="NEW">Socketpipe source code</a>
+<li><a href="socketpipe.1" target="NEW">Socketpipe manual page source</a>
+</ul>
+<h3>Documentation</h3>
+<ul>
+<li><a href="socketpipe.html" target="NEW">Formatted manual page (HTML)</a>
+<li><a href="socketpipe.pdf" target="NEW">Formatted manual page (PDF)</a>
+<li><a href="ChangeLog.txt" target="NEW">Change log</a>
+</ul>
+
+<a href="../../.." target="NEW">Diomidis Spinellis home page</a>
+<HR> <P>
+<font size=-2>
+(C) Copyright 2003-2004 D. Spinellis.
+May be freely uploaded by WWW viewers and similar programs.
+All other rights reserved.
+<br />
+Last modified: $Date: 2004/03/28 14:21:50 $
+</font>
+</BODY>
+</HTML>
