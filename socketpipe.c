@@ -1,17 +1,17 @@
-/* 
- * (C) Copyright 2003 Diomidis Spinellis
- * 
+/*
+ * (C) Copyright 2003-2004 Diomidis Spinellis
+ *
  * Permission to use, copy, and distribute this software and its
  * documentation for any purpose and without fee is hereby granted,
  * provided that the above copyright notice appear in all copies and that
  * both that copyright notice and this permission notice appear in
  * supporting documentation.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR IMPLIED
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $Id: socketpipe.c,v 1.5 2003/09/01 11:00:44 dds Exp $
+ * $Id: socketpipe.c,v 1.6 2004/03/28 14:28:43 dds Exp $
  *
  */
 
@@ -63,6 +63,7 @@ fatal(const char *fmt, ...)
 	exit(2);
 }
 
+/* Checked malloc */
 static void *
 xmalloc(size_t n)
 {
@@ -88,7 +89,7 @@ parse_arguments(char *argv[])
 	char **p, **start;
 	char ***result;
 	int nest;
-	
+
 	for (p = argv + 1; *p; p++) {
 		/* Require a single character option */
 		if (p[0][0] != '-' || !p[0][1] || p[0][2])
@@ -208,11 +209,11 @@ client(char *argv[])
 		/* Child; remotely execute the command specified */
 		if (batch) {
 			int nullfd;
-			/* 
-			 * These fix kown problems for OpenSSH_3.5p1 
+			/*
+			 * These fix kown problems for OpenSSH_3.5p1
 			 * Other login methods may have similar problems
 			 */
-			/* 
+			/*
 			 * ssh messes with stdout converting the parent end
 			 * to non-blocking I/O.  We therefore close it here.
 			 */
@@ -319,7 +320,7 @@ server(char *argv[])
 	port = (int)strtol(argv[3], &endptr, 10);
 	if (*argv[3] == 0 || *endptr != 0)
 		fatal("bad port specification: %s", argv[3]);
-		
+
 	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
 		fatal("socket allocation failed: ", strerror(errno));
 
