@@ -11,7 +11,7 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $Id: socketpipe.c,v 1.3 2003/08/27 14:10:33 dds Exp $
+ * $Id: socketpipe.c,v 1.4 2003/09/01 07:48:29 dds Exp $
  *
  */
 
@@ -297,8 +297,6 @@ server(char *argv[])
 	int sock;
 	char *endptr;
 	struct hostent *h;
-	in_addr_t inaddr;
-
 
 	port = (int)strtol(argv[3], &endptr, 10);
 	if (*argv[3] == 0 || *endptr != 0)
