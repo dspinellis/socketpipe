@@ -51,7 +51,7 @@ Backup the local host on a tape drive located on <em>remotehost</em>.
 <pre>
 socketpipe -l { ssh remotehost } -r { dd if=/dev/st0 bs=32k } -o { tar xpf - /home/luser }
 </pre>
-Restore a directory using the tape driver on the remote host.
+Restore a directory using the tape drive on the remote host.
 <pre>
 socketpipe -i { tar cf - / } -l { ssh remotehost } -r { bzip2 -c } -o { dd of=/dev/st0 bs=32k }
 </pre>
@@ -82,7 +82,7 @@ Following a link will open a new browser window.
 May be freely uploaded by WWW viewers and similar programs.
 All other rights reserved.
 <br />
-Last modified: $Date: 2004/03/28 14:21:50 $
+Last modified: $Date: 2004/03/28 14:32:38 $
 </font>
 </BODY>
 </HTML>
