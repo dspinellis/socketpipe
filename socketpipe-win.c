@@ -14,7 +14,7 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $Id: socketpipe-win.c,v 1.1 2005/09/27 06:00:52 dds Exp $
+ * $Id: socketpipe-win.c,v 1.2 2005/09/27 08:16:15 dds Exp $
  *
  */
 
@@ -167,7 +167,7 @@ parse_arguments(char *argv[])
  * Run the remote command on the remote machine connecting it to
  * the local input and/or output processes.
  */
-static void
+static int
 client(char *argv[])
 {
 	struct sockaddr_in loc_addr;
@@ -248,7 +248,7 @@ client(char *argv[])
 	 * perl.perl5.porters > socket() call uses non-IFS providers causing subsequent print/read to hang or misbehave
 	 * http://groups.google.com/group/perl.perl5.porters/msg/b23f04f62cdbd945?hl=en&utoken=dfS2yzIAAACb-xRze_lVAgVCnJd7_BU4TY4yx6oSFVIPwClGmhM46mb6oOYE8F84y-vJWNEg3rv1Ad0ufVf6pcmlCk7086Li
 	 */
-	if ((newsockfd = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, 0 /* WSA_FLAG_OVERLAPPED */)) == INVALID_SOCKET)
+	if ((newsockfd = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, 0)) == INVALID_SOCKET)
 		fatal("WSASocket failed: %s", wstrerror(WSAGetLastError()));
 	linger.l_onoff = 1;
 	linger.l_linger = 60;
@@ -281,7 +281,7 @@ client(char *argv[])
 		istart.dwFlags = STARTF_USESTDHANDLES;
 		istart.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
 		istart.hStdOutput = (HANDLE)newsockfd;
-		istart.hStdInput = GetStdHandle(STD_ERROR_HANDLE);
+		istart.hStdError = GetStdHandle(STD_ERROR_HANDLE);
 		if (!CreateProcess(NULL, inputv, NULL, NULL, 1, NORMAL_PRIORITY_CLASS, NULL, NULL, &istart, &inpi))
 			fatal("execution of { %s } failed: %s", inputv, wstrerror(GetLastError()));
 	}
@@ -303,7 +303,8 @@ client(char *argv[])
 		err_proc = outpi.hProcess;
 	}
 
-	closesocket(newsockfd);
+	if (closesocket(newsockfd) != 0)
+		fatal("closesocket failed: %s", wstrerror(GetLastError()));
 	/* Wait for all our children to terminate */
 	while (nwait) {
 		HANDLE handles[3];
@@ -331,16 +332,15 @@ client(char *argv[])
 		else if (handles[waitret] == outpi.hProcess)
 			outpi.hProcess = INVALID_HANDLE_VALUE;
 	}
-	exit(exitstatus);
+	return (exitstatus);
 }
 
 /*
  * Server invocation interface.
  * Run as the remote server executing the specified command and
  * connecting back to the client.
- * This compiles, but has not been tested under Windows.
  */
-static void
+static int
 server(char *argv[])
 {
 	short port;
@@ -348,13 +348,27 @@ server(char *argv[])
 	int sock;
 	char *endptr;
 	struct hostent *h;
+	LINGER linger;
+	STARTUPINFO istart;
+	PROCESS_INFORMATION proc;
+	int i, len;
+	char *cmdline;
+	DWORD exitstatus, waitret;
 
 	port = (short)strtol(argv[3], &endptr, 10);
 	if (*argv[3] == 0 || *endptr != 0)
 		fatal("bad port specification: %s", argv[3]);
 
-	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-		fatal("socket allocation failed: ", wstrerror(WSAGetLastError()));
+	/* See comment in the client on how we allocate sockets. */
+	if ((sock = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, 0)) == INVALID_SOCKET)
+		fatal("WSASocket failed: %s", wstrerror(WSAGetLastError()));
+	linger.l_onoff = 1;
+	linger.l_linger = 60;
+	if (setsockopt(sock, SOL_SOCKET, SO_LINGER, (const char *)&linger, sizeof(linger)) != 0)
+		fatal("setsockopt(SO_LINGER) failed: %s", wstrerror(WSAGetLastError()));
+	/* Allow the socket to be inherited */
+	if (!SetHandleInformation((HANDLE)sock, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT))
+		fatal("SetHandleInformation failed: %s", wstrerror(GetLastError()));
 
 	memset((char *)&rem_addr, 0, sizeof(rem_addr));
 	rem_addr.sin_port = htons(port);
@@ -374,15 +388,33 @@ server(char *argv[])
 		fatal("connect(%s) failed: %s", argv[2], wstrerror(WSAGetLastError()));
 
 	/* Redirect I/O to the socket */
-	if (dup2(sock, STDIN_FILENO) < 0)
-		fatal("input redirection failed: %s", strerror(errno));
-
-	if (dup2(sock, STDOUT_FILENO) < 0)
-		fatal("output redirection failed: %s", strerror(errno));
-
-	if (execvp(argv[4], argv + 4) < 0)
-		fatal("exec(%s) failed: %s", argv[4], strerror(errno));
-	/* NOTREACHED */
+	memset(&istart, 0, sizeof(istart));
+	istart.cb = sizeof(istart);
+	istart.wShowWindow = SW_HIDE;
+	istart.dwFlags = STARTF_USESTDHANDLES;
+	istart.hStdInput = (HANDLE)sock;
+	istart.hStdOutput = (HANDLE)sock;
+	istart.hStdError = GetStdHandle(STD_ERROR_HANDLE);
+	/* Create command line */
+	len = 0;
+	for (i = 4; argv[i]; i++)
+		len += strlen(argv[i]) + 1;
+	cmdline = (char *)xmalloc(len);
+	*cmdline = 0;
+	for (i = 4; argv[i]; i++) {
+		strcat(cmdline, argv[i]);
+		if (argv[i] + 1)
+			strcat(cmdline, " ");
+	}
+	if (!CreateProcess(NULL, cmdline, NULL, NULL, 1, NORMAL_PRIORITY_CLASS, NULL, NULL, &istart, &proc))
+		fatal("execution of { %s } failed: %s", inputv, wstrerror(GetLastError()));
+	if ((waitret = WaitForMultipleObjects(1, &(proc.hProcess), FALSE, INFINITE)) == WAIT_FAILED)
+		fatal("WaitForMultipleObjects failed: %s", wstrerror(GetLastError()));
+	if (!GetExitCodeProcess(proc.hProcess, &exitstatus))
+		fatal("GetExitCodeProcess failed: %s", wstrerror(GetLastError()));
+	if (closesocket(sock) != 0)
+		fatal("closesocket failed: %s", wstrerror(GetLastError()));
+	return (exitstatus);
 }
 
 int
@@ -398,8 +430,7 @@ main(int argc, char *argv[])
 	if (!argv[1])
 		usage("no arguments specified");
 	if (strcmp(argv[1], "-s") == 0)
-		server(argv);
+		return server(argv);
 	else
-		client(argv);
-	/* NOTREACHED */
+		return client(argv);
 }
