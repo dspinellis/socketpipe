@@ -14,7 +14,7 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $Id: socketpipe-win.c,v 1.3 2005/09/28 13:16:06 dds Exp $
+ * $Id: socketpipe-win.c,v 1.4 2005/09/28 13:41:36 dds Exp $
  *
  */
 
@@ -225,6 +225,7 @@ client(char *argv[])
 	WSAOVERLAPPED overlap;
 	char lpOutputBuf[1024];
 	LINGER linger;
+	struct hostent *h;
 
 	parse_arguments(argv);
 	if (!remotev)
@@ -237,6 +238,10 @@ client(char *argv[])
 	/* Create socket to remote end */
 	if (gethostname(hostname, sizeof(hostname)) < 0)
 		fatal("gethostname failed: %s", wstrerror(WSAGetLastError()));
+	if ((h = gethostbyname(hostname)) == NULL)
+		fatal("gethostbyname(%s) failed: %s", hostname, wstrerror(WSAGetLastError()));
+	strcpy(hostname, inet_ntoa((*(struct in_addr *)(h->h_addr_list[0]))));
+	printf("Host %s is IP %s\n", h->h_name, hostname);
 
 	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
 		fatal("socket allocation failed: %s", wstrerror(WSAGetLastError()));
