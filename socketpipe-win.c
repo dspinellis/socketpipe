@@ -14,7 +14,7 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $Id: socketpipe-win.c,v 1.2 2005/09/27 08:16:15 dds Exp $
+ * $Id: socketpipe-win.c,v 1.3 2005/09/28 13:16:06 dds Exp $
  *
  */
 
@@ -32,6 +32,7 @@
 #include <winsock2.h>
 #include <windows.h>
 #include <mswsock.h>
+#include <ws2spi.h>
 #include <sys/types.h>
 
 #define MAXHOSTNAMELEN 1024
@@ -163,6 +164,45 @@ parse_arguments(char *argv[])
 }
 
 /*
+ * Return an IFS socket. This can be used for ReadFile/WriteFile
+ */
+SOCKET
+ifs_socket(int af, int type, int proto)
+{
+	unsigned long pblen = 0;
+	SOCKET ret;
+	WSAPROTOCOL_INFOW *pbuff;
+	WSAPROTOCOL_INFOA pinfo;
+	int nprotos, i, err;
+
+	if (WSCEnumProtocols(NULL, NULL, &pblen, &err) != SOCKET_ERROR)
+		fatal("No socket protocols available");
+	if (err != WSAENOBUFS)
+		fatal("WSCEnumProtocols failed: %s", wstrerror(err));
+	pbuff = (WSAPROTOCOL_INFOW *)xmalloc(pblen);
+	if ((nprotos = WSCEnumProtocols(NULL, pbuff, &pblen, &err)) == SOCKET_ERROR)
+		fatal("WSCEnumProtocols failed: %s", wstrerror(err));
+	for (i = 0; i < nprotos; i++) {
+		if ((af != AF_UNSPEC && af != pbuff[i].iAddressFamily)
+		    || (type != pbuff[i].iSocketType)
+		    || (proto != 0 && pbuff[i].iProtocol != 0 &&
+		    proto != pbuff[i].iProtocol))
+			continue;
+		if (!(pbuff[i].dwServiceFlags1 & XP1_IFS_HANDLES))
+			continue;
+
+		memcpy(&pinfo, pbuff + i, sizeof(pinfo));
+		wcstombs(pinfo.szProtocol, pbuff[i].szProtocol, sizeof(pinfo.szProtocol));
+		free(pbuff);
+		if ((ret = WSASocket(af, type, proto, &pinfo, 0, 0)) == INVALID_SOCKET)
+			fatal("WSASocket failed: %s", wstrerror(WSAGetLastError()));
+		return ret;
+	}
+	fatal("No IFS socket provider found");
+	/* NOTREACHED */
+}
+
+/*
  * Client invocation interface
  * Run the remote command on the remote machine connecting it to
  * the local input and/or output processes.
@@ -241,15 +281,11 @@ client(char *argv[])
 	err_proc = rempi.hProcess;
 	/* Accept a connection */
 	/*
-	 * It seems we have to create newsockfd through WSASocket/AcceptEx for ReadFile/WriteFile
-	 * redirection through it to work.  Socket descriptors returned from socket/accept did not
-	 * work.  This may just be an implementation accident of the way the socket provider is
-	 * found.  In such a case we may need to work harder to find the right provider; see
-	 * perl.perl5.porters > socket() call uses non-IFS providers causing subsequent print/read to hang or misbehave
-	 * http://groups.google.com/group/perl.perl5.porters/msg/b23f04f62cdbd945?hl=en&utoken=dfS2yzIAAACb-xRze_lVAgVCnJd7_BU4TY4yx6oSFVIPwClGmhM46mb6oOYE8F84y-vJWNEg3rv1Ad0ufVf6pcmlCk7086Li
+	 * It seems we have to create newsockfd through WSASocket/AcceptEx and
+	 * and IFS socket for ReadFile/WriteFile redirection through it to work.
+	 * Socket descriptors returned from socket/accept did not work.
 	 */
-	if ((newsockfd = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, 0)) == INVALID_SOCKET)
-		fatal("WSASocket failed: %s", wstrerror(WSAGetLastError()));
+	newsockfd = ifs_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	linger.l_onoff = 1;
 	linger.l_linger = 60;
 	if (setsockopt(newsockfd, SOL_SOCKET, SO_LINGER, (const char *)&linger, sizeof(linger)) != 0)
@@ -359,9 +395,7 @@ server(char *argv[])
 	if (*argv[3] == 0 || *endptr != 0)
 		fatal("bad port specification: %s", argv[3]);
 
-	/* See comment in the client on how we allocate sockets. */
-	if ((sock = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, 0)) == INVALID_SOCKET)
-		fatal("WSASocket failed: %s", wstrerror(WSAGetLastError()));
+	sock = ifs_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	linger.l_onoff = 1;
 	linger.l_linger = 60;
 	if (setsockopt(sock, SOL_SOCKET, SO_LINGER, (const char *)&linger, sizeof(linger)) != 0)
