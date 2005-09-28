@@ -14,7 +14,7 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $Id: socketpipe-win.c,v 1.4 2005/09/28 13:41:36 dds Exp $
+ * $Id: socketpipe-win.c,v 1.5 2005/09/28 14:24:58 dds Exp $
  *
  */
 
@@ -338,7 +338,7 @@ client(char *argv[])
 		istart.dwFlags = STARTF_USESTDHANDLES;
 		istart.hStdInput = (HANDLE)newsockfd;
 		istart.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-		istart.hStdInput = GetStdHandle(STD_ERROR_HANDLE);
+		istart.hStdError = GetStdHandle(STD_ERROR_HANDLE);
 		if (!CreateProcess(NULL, outputv, NULL, NULL, 1, NORMAL_PRIORITY_CLASS, NULL, NULL, &istart, &outpi))
 			fatal("execution of { %s } failed: %s", outputv, wstrerror(GetLastError()));
 		err_proc = outpi.hProcess;
