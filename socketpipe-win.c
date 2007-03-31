@@ -14,7 +14,7 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $Id: socketpipe-win.c,v 1.5 2005/09/28 14:24:58 dds Exp $
+ * $Id: socketpipe-win.c,v 1.6 2007/03/31 12:36:48 dds Exp $
  *
  */
 
@@ -155,6 +155,7 @@ parse_arguments(char *argv[])
 		for (s = start; s != p; s++)
 			len += strlen(*s) + 1;
 		*result = (char *)xmalloc(len);
+		**result = 0;
 		for (s = start; s != p; s++) {
 			strcat(*result, *s);
 			if (s + 1 != p)
