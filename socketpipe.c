@@ -11,7 +11,7 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $Id: socketpipe.c,v 1.6 2004/03/28 14:28:43 dds Exp $
+ * $Id: socketpipe.c,v 1.7 2008/03/22 20:51:32 dds Exp $
  *
  */
 
@@ -144,6 +144,7 @@ client(char *argv[])
 	int inpid, outpid;
 	int nwait = 0;			/* Children to wait for */
 	int exitstatus;
+	int one = 1;
 
 	parse_arguments(argv);
 	if (!remotev)
@@ -204,6 +205,8 @@ client(char *argv[])
 		if ((newsockfd = accept(sockfd, (struct sockaddr *)&rem_addr, &addr_len)) < 0)
 			fatal("accept failed: %s", strerror(errno));
 		nwait++;
+		if (setsockopt(sockfd, SOL_SOCKET, SO_KEEPALIVE, (char *)&one, sizeof(int)) < 0)
+			fatal("can't set KEEPALIVE for socket: %s", strerror(errno));
 		break;
 	case 0:
 		/* Child; remotely execute the command specified */
@@ -316,6 +319,7 @@ server(char *argv[])
 	int sock;
 	char *endptr;
 	struct hostent *h;
+	int one = 1;
 
 	port = (int)strtol(argv[3], &endptr, 10);
 	if (*argv[3] == 0 || *endptr != 0)
@@ -336,6 +340,8 @@ server(char *argv[])
 
 	if (connect(sock, (struct sockaddr *)&rem_addr, sizeof(rem_addr)) < 0)
 		fatal("connect(%s) failed: %s", argv[2], strerror(errno));
+	if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, (char *)&one, sizeof(int)) < 0)
+		fatal("can't set KEEPALIVE for socket: %s", strerror(errno));
 
 	/* Redirect I/O to the socket */
 	if (dup2(sock, STDIN_FILENO) < 0)

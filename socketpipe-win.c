@@ -14,7 +14,7 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  *
- * $Id: socketpipe-win.c,v 1.6 2007/03/31 12:36:48 dds Exp $
+ * $Id: socketpipe-win.c,v 1.7 2008/03/22 20:51:32 dds Exp $
  *
  */
 
@@ -227,6 +227,7 @@ client(char *argv[])
 	char lpOutputBuf[1024];
 	LINGER linger;
 	struct hostent *h;
+	int one = 1;
 
 	parse_arguments(argv);
 	if (!remotev)
@@ -296,6 +297,8 @@ client(char *argv[])
 	linger.l_linger = 60;
 	if (setsockopt(newsockfd, SOL_SOCKET, SO_LINGER, (const char *)&linger, sizeof(linger)) != 0)
 		fatal("setsockopt(SO_LINGER) failed: %s", wstrerror(WSAGetLastError()));
+	if (setsockopt(newsockfd, SOL_SOCKET, SO_KEEPALIVE, (char *)&one, sizeof(int)) < 0)
+		fatal("setsockopt(SO_KEEPALIVE) failed: %s", wstrerror(WSAGetLastError()));
 	memset(&overlap, 0, sizeof(overlap));
 	if ((overlap.hEvent = CreateEvent(NULL, FALSE, FALSE, NULL)) == NULL)
 		fatal("CreateEvent failed: %s", wstrerror(GetLastError()));
@@ -396,6 +399,7 @@ server(char *argv[])
 	int i, len;
 	char *cmdline;
 	DWORD exitstatus, waitret;
+	int one = 1;
 
 	port = (short)strtol(argv[3], &endptr, 10);
 	if (*argv[3] == 0 || *endptr != 0)
@@ -426,6 +430,8 @@ server(char *argv[])
 
 	if (connect(sock, (struct sockaddr *)&rem_addr, sizeof(rem_addr)) < 0)
 		fatal("connect(%s) failed: %s", argv[2], wstrerror(WSAGetLastError()));
+	if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, (char *)&one, sizeof(int)) < 0)
+		fatal("setsockopt(SO_KEEPALIVE) failed: %s", wstrerror(WSAGetLastError()));
 
 	/* Redirect I/O to the socket */
 	memset(&istart, 0, sizeof(istart));
