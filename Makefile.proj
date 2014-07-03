@@ -32,7 +32,7 @@ $(SRC_BALL): $(DOC) $(NAME).1 $(NAME).c Makefile
 	cmd /c rd /q/s "$(DIR)"
 
 socketpipe.exe: socketpipe-win.c
-	cl -o socketpipe.exe -W3 -Ox socketpipe-win.c mswsock.lib Ws2_32.lib Kernel32.lib
+	nmake /f Makefile.mak
 
 web: $(DOC) $(SRC_BALL) socketpipe.exe
 	-chmod 666 $(WEBDIR)/$(NAME).c $(WEBDIR)/$(NAME).1 $(WEBDIR)/socketpipe-win.c
