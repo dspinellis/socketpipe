@@ -1,5 +1,4 @@
 NAME=socketpipe
-UXHOST=spiti
 SSH=plink
 VERSION=1.9
 DIR=$(NAME)-$(VERSION)
@@ -11,16 +10,16 @@ $(NAME): $(NAME).c
 	$(CC) $(CFLAGS) -o $@ $?
 
 $(NAME).ps: $(NAME).1
-	$(SSH) $(UXHOST) groff -man -Tps <$? > $@
+	groff -man -Tps <$? > $@
 
 $(NAME).txt: $(NAME).1
-	$(SSH) $(UXHOST) groff -man -Tascii <$? | $(SSH) $(UXHOST) col -b > $@
+	groff -man -Tascii <$? | col -b > $@
 
 $(NAME).pdf: $(NAME).ps
 	ps2pdf $? $@
 
 $(NAME).html: $(NAME).1
-	$(SSH) $(UXHOST) groff -mhtml -Thtml -man <$? | sed -e 's/&minus;/-/g;s/&bull;/\&#8226;/g' >$@
+	groff -mhtml -Thtml -man <$? | sed -e 's/&minus;/-/g;s/&bull;/\&#8226;/g' >$@
 
 src-tarball: $(SRC_BALL)
 
@@ -29,7 +28,7 @@ $(SRC_BALL): $(DOC) $(NAME).1 $(NAME).c Makefile.dist
 	mkdir $(DIR)
 	cp $(NAME).1 $(NAME).c $(NAME).pdf $(NAME).html $(NAME).txt ChangeLog.txt socketpipe-win.c $(DIR)
 	cp Makefile.dist $(DIR)/Makefile
-	for i in $(NAME).1 $(NAME).c Makefile ; do perl /usr/local/bin/lf.bat $(DIR)/$$i ; done
+	for i in $(NAME).1 $(NAME).c Makefile ; do dos2unix $(DIR)/$$i ; done
 	tar czvf $(SRC_BALL) $(DIR)
 	cmd /c rd /q/s "$(DIR)"
 
