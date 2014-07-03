@@ -1,0 +1,39 @@
+revision 1.9
+date: 2008/03/22 20:50
+Fix to clean up clients when a server disappears during the operation.
+(Dmitry Morozovsky)
+----------------------------
+
+revision 1.8
+date: 2007/03/31 15:35
+Fix error in the Windows command line parsing (West Lars-Gunnar)
+----------------------------
+revision 1.7
+date: 2005/09/27 09:01:17
+Add Microsoft Windows implementation.
+----------------------------
+revision 1.6
+date: 2004/03/28 14:28:43
+Add changelog file.
+Source cleanup.
+----------------------------
+revision 1.5
+date: 2003/09/01 11:00:44
+Added batch login -b flag.
+----------------------------
+revision 1.4
+date: 2003/09/01 07:48:29
+Removed extraneous variable.
+----------------------------
+revision 1.3
+date: 2003/08/27 14:10:33
+Changed name.
+----------------------------
+revision 1.2
+date: 2003/08/15 20:04:43
+Fixed problem reported by Dmitry Morozovsky:
+output process reporting: Resource temporarily unavailable
+----------------------------
+revision 1.1
+date: 2003/07/26 21:34:29
+Initial revision
