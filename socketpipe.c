@@ -67,10 +67,9 @@ xmalloc(size_t n)
 {
 	void *p = malloc(n);
 
-	if (p)
-		return p;
-	else
+	if (!p)
 		fatal("out of memory");
+	return p;
 }
 
 /* Program argument vectors */
@@ -133,7 +132,7 @@ client(char *argv[])
 {
 	struct sockaddr_in loc_addr, rem_addr;
 	int sockfd, newsockfd = -1;
-	int addr_len;
+	socklen_t addr_len;
 	char hostname[MAXHOSTNAMELEN];
 	char portname[20];
 	char **rloginv, **p, **rp;
