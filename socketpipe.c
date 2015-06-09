@@ -75,6 +75,7 @@ xmalloc(size_t n)
 /* Program argument vectors */
 static char **inputv, **outputv, **remotev, **loginv;
 static int batch = 0;
+static char *hostname;
 
 /*
  * Set the input, output, remote, and login vectors based on
@@ -97,6 +98,11 @@ parse_arguments(char *argv[])
 		case 'r': result = &remotev; break;
 		case 'l': result = &loginv; break;
 		case 'b': batch = 1; continue;
+		case 'h':
+			  if (!++p)
+				  usage("-h option expects a host name or address");
+			  hostname = *p;
+			  continue;
 		default: usage("invalid option");
 		}
 		if (!*++p || strcmp(*p, "{"))
@@ -123,6 +129,44 @@ parse_arguments(char *argv[])
 }
 
 /*
+ * Obtain our local address with respect to the remote host, by
+ * running the remote login command (hopefully ssh) and
+ * looking at the SSH_CLIENT environemtn variable.
+ * The loginv array must have been set when this routine is called.
+ *
+ * Note: Getting the address of gethostname is not good enough,
+ * because we might connect to various hosts through diverse
+ * interfaces.
+ */
+static char *
+get_remote_host_address()
+{
+	const char cmd[] = "'set $SSH_CLIENT && echo -n $1'";
+	char *login_cmd;
+	char *d;
+	int cmd_len = sizeof(cmd);
+	FILE *f;
+	char *hostname = xmalloc(INET_ADDRSTRLEN);
+	char **p;
+
+	for (p = loginv; *p; p++)
+		cmd_len += strlen(*p) + 1;
+	d = login_cmd = xmalloc(cmd_len + 1);
+	for (p = loginv; *p; p++) {
+		int l = strlen(*p);
+		memcpy(d, *p, l);
+		d[l] = ' ';
+		d += l + 1;
+	}
+	memcpy(d, cmd, sizeof(cmd));
+	if ((f = popen(login_cmd, "r")) == NULL ||
+			fgets(hostname, INET_ADDRSTRLEN, f) == NULL ||
+			pclose(f) != 0)
+		fatal("Error executing [%s] to get our IP address", login_cmd);
+	return (hostname);
+}
+
+/*
  * Client invocation interface
  * Run the remote command on the remote machine connecting it to
  * the local input and/or output processes.
@@ -133,7 +177,6 @@ client(char *argv[])
 	struct sockaddr_in loc_addr, rem_addr;
 	int sockfd, newsockfd = -1;
 	socklen_t addr_len;
-	char hostname[MAXHOSTNAMELEN];
 	char portname[20];
 	char **rloginv, **p, **rp;
 	int count;
@@ -151,10 +194,19 @@ client(char *argv[])
 	if (!inputv && !outputv)
 		usage("must specify a local input or output process");
 
-	/* Create socket to remote end */
-	if (gethostname(hostname, sizeof(hostname)) < 0)
-		fatal("gethostname failed: %s", strerror(errno));
+	/*
+	 * Obtain our local address wrt to the remote host, by
+	 * running the remote login command (presumably ssh) and
+	 * looking at the SSH_CLIENT environemtn variable.
+	 *
+	 * Getting the address of gethostname is not good enough,
+	 * because we might connect to various hosts through diverse
+	 * interfaces.
+	 */
+	if (!hostname)
+		hostname = get_remote_host_address();
 
+	/* Create socket to remote end */
 	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
 		fatal("socket allocation failed: %s", strerror(errno));
 

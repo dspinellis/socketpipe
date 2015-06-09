@@ -1,6 +1,6 @@
-.TH SOCKETPIPE 1 "1 September 2003"
+.TH SOCKETPIPE 1 "9 June 2015"
 .\"
-.\" (C) Copyright 2003 Diomidis Spinellis.  All rights reserved.
+.\" (C) Copyright 2003-2015 Diomidis Spinellis.  All rights reserved.
 .\"
 .\" Permission to use, copy, and distribute this software and its
 .\" documentation for any purpose and without fee for noncommercial use
@@ -15,8 +15,9 @@
 .SH NAME
 socketpipe \- zero overhead remote process plumbing
 .SH SYNOPSIS
-\fBsocketpipe\fP 
+\fBsocketpipe\fP
 [\fB\-b\fP]
+[\fB\-h\fP \fIhost\fP]
 [\fB\-i\fP \fB{\fP \fIinput generation command\fP [\fIargs\fP ... ] \fB}\fP ]
 \fB\-l\fP \fB{\fP \fIlogin command\fP [\fIargs\fP ... ] \fB}\fP
 \fB\-r\fP \fB{\fP \fIremote command\fP [\fIargs\fP ... ] \fB}\fP
@@ -105,6 +106,17 @@ its standard input from /dev/null solving those problems.
 On the other hand this flag will disable I/O to/from the remote login
 command and may therefore interfere with any interaction required
 for the authentication process.
+
+.IP "\fB\-h\fP \fIhost\fP"
+Specify the name or address of the local host.
+The specified string is used by the remote host to connect back to the
+originating local host.
+If this option is not set,
+the local host address with respect to the remote host is obtained automatically
+by opening a connection to the remote host and looking
+at the \fISSH_CLIENT\fP environment variable.
+Setting this option may be required when the connection to the remote
+host is not done via \fIssh\fP or if an alternative routing path is preferred.
 
 .SH EXAMPLE
 .PP
