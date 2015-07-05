@@ -1,4 +1,4 @@
-.TH SOCKETPIPE 1 "9 June 2015"
+.TH SOCKETPIPE 1 "5 July 2015"
 .\"
 .\" (C) Copyright 2003-2015 Diomidis Spinellis.  All rights reserved.
 .\"
@@ -18,6 +18,7 @@ socketpipe \- zero overhead remote process plumbing
 \fBsocketpipe\fP
 [\fB\-b\fP]
 [\fB\-h\fP \fIhost\fP]
+[\fB\-t\fP \fItimeout\fP]
 [\fB\-i\fP \fB{\fP \fIinput generation command\fP [\fIargs\fP ... ] \fB}\fP ]
 \fB\-l\fP \fB{\fP \fIlogin command\fP [\fIargs\fP ... ] \fB}\fP
 \fB\-r\fP \fB{\fP \fIremote command\fP [\fIargs\fP ... ] \fB}\fP
@@ -117,6 +118,14 @@ by opening a connection to the remote host and looking
 at the \fISSH_CLIENT\fP environment variable.
 Setting this option may be required when the connection to the remote
 host is not done via \fIssh\fP or if an alternative routing path is preferred.
+
+.IP "\fB\-t\fP \fItimeout\fP"
+Specify the time for which the server side will wait for the client to connect.
+By default this value is zero, which means that the server side will wait
+forever.
+Smaller values are useful for detecting a connection problem
+(e.g. due to incoming connection firewall rules)
+and exiting with an error.
 
 .SH EXAMPLE
 .PP

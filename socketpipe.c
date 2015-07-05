@@ -13,6 +13,15 @@
  *
  */
 
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/wait.h>
+#include <sys/param.h>
+
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,12 +31,6 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <netdb.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/wait.h>
-#include <sys/param.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 
 static char *progname;
 
@@ -35,7 +38,7 @@ static void
 usage(const char *msg)
 {
 	fprintf(stderr, "%s: %s\n", progname, msg);
-	fprintf(stderr, "usage:\t%s [-b] [-i|o|r|l { command [args ...] }]\n", progname);
+	fprintf(stderr, "usage:\t%s [-b] [-h host] [-t timeout] [-i|o|r|l { command [args ...] }]\n", progname);
 	fprintf(stderr, "\t(must specify a -l and a -r command and at least one of -i or -o)\n");
 #ifdef DEBUG
 	fprintf(stderr, "\t%s -s host port command [args ...]\n", progname);
@@ -76,6 +79,7 @@ xmalloc(size_t n)
 static char **inputv, **outputv, **remotev, **loginv;
 static int batch = 0;
 static char *hostname;
+static int timeout = 0;
 
 /*
  * Set the input, output, remote, and login vectors based on
@@ -98,6 +102,11 @@ parse_arguments(char *argv[])
 		case 'r': result = &remotev; break;
 		case 'l': result = &loginv; break;
 		case 'b': batch = 1; continue;
+		case 't':
+			  if (!++p)
+				  usage("-t option expects a host name or address");
+			  timeout = atoi(*p);
+			  continue;
 		case 'h':
 			  if (!++p)
 				  usage("-h option expects a host name or address");
@@ -251,6 +260,21 @@ client(char *argv[])
 		fatal("fork failed: %s", strerror(errno));
 	default:
 		/* Parent; accept a connection */
+		if (timeout) {
+			fd_set readfds;
+			struct timeval t;
+			int n;
+
+			FD_ZERO(&readfds);
+			FD_SET(sockfd, &readfds);
+			t.tv_sec = timeout;
+			t.tv_usec = 0;
+			if ((n = select(sockfd + 1, &readfds, NULL, NULL, &t)) < 0)
+				fatal("select failed: %s", strerror(errno));
+			if (n == 0)
+				fatal("Client connection timeout of %ds expired", timeout);
+		}
+
 		if ((newsockfd = accept(sockfd, (struct sockaddr *)&rem_addr, &addr_len)) < 0)
 			fatal("accept failed: %s", strerror(errno));
 		nwait++;
