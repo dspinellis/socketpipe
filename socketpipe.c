@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2003-2004 Diomidis Spinellis
+ * (C) Copyright 2003-2015 Diomidis Spinellis
  *
  * Permission to use, copy, and distribute this software and its
  * documentation for any purpose and without fee is hereby granted,
@@ -140,7 +140,7 @@ parse_arguments(char *argv[])
 /*
  * Obtain our local address with respect to the remote host, by
  * running the remote login command (hopefully ssh) and
- * looking at the SSH_CLIENT environemtn variable.
+ * looking at the SSH_CLIENT environment variable.
  * The loginv array must have been set when this routine is called.
  *
  * Note: Getting the address of gethostname is not good enough,
@@ -184,7 +184,7 @@ static void
 client(char *argv[])
 {
 	struct sockaddr_in loc_addr, rem_addr;
-	int sockfd, newsockfd = -1;
+	int sockfd, newsockfd = -1, inputfd = STDIN_FILENO;
 	socklen_t addr_len;
 	char portname[20];
 	char **rloginv, **p, **rp;
@@ -202,6 +202,22 @@ client(char *argv[])
 		usage("must specify remote login method");
 	if (!inputv && !outputv)
 		usage("must specify a local input or output process");
+
+	/*
+	 * If our input does not come from a terminal ensure that only the
+	 * input generation process gets stdin. Otherwise other processes
+	 * might capture piped data, resulting in data loss.  We ensure this
+	 * by closing stdin and keeping a backup to pass as stdin to the
+	 * input generation process.
+	 */
+	if (!isatty(STDIN_FILENO)) {
+		if ((inputfd = dup(STDIN_FILENO)) == -1)
+			fatal("stdin backup failed: %s", strerror(errno));
+		if (close(STDIN_FILENO) == -1)
+			fatal("closing stdin failed: %s", strerror(errno));
+		if (fcntl(inputfd, F_SETFD, FD_CLOEXEC) == -1)
+			fatal("close on exec inputfd failed: %s", strerror(errno));
+	}
 
 	/*
 	 * Obtain our local address wrt to the remote host, by
@@ -329,6 +345,9 @@ client(char *argv[])
 				fatal("input process output redirection failed: %s", strerror(errno));
 			if (close(newsockfd) < 0)
 				fatal("socket close failed: %s", strerror(errno));
+			/* Provide stdin with no close on exec */
+			if (dup2(inputfd, STDIN_FILENO) == -1)
+				fatal("input process input provision failed: %s", strerror(errno));
 			if (execvp(inputv[0], inputv) < 0)
 				fatal("execution of %s failed: %s", inputv[0], strerror(errno));
 			/* NOTREACHED */
