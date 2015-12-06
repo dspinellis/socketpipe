@@ -1,3 +1,7 @@
+revision 1.10
+date: 2015/12/06 09:45
+Fix to address data loss on input.
+
 revision 1.9
 date: 2008/03/22 20:50
 Fix to clean up clients when a server disappears during the operation.
