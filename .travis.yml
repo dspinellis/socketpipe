@@ -1,3 +1,19 @@
 language: c
 
 script: make
+
+env:
+  global:
+   # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
+   #   via the "travis encrypt" command using the project repo's public key
+   - secure: "BqINQX+Idn9/9yy8NAGFa24kdyLspoa8C+pm1qAJI8Ni40iYdkmn8K5XPKLpd9QCpFd/4ZIJ0kD1N4I2ODwiJTSBYWAuE4LnyaC8FWYELswvmXJ5iWJtvIdqxDhw/f2AayU3tobVxufg40UQEElT88JWhhiK60PYniCboR3zQUc="
+
+addons:
+  coverity_scan:
+    project:
+      name: "dspinellis/socketpipe"
+      description: "Build submitted via Travis CI"
+    notification_email: dds@aueb.gr
+    build_command_prepend: "make clean"
+    build_command:   "make"
+    branch_pattern: coverity_scan
