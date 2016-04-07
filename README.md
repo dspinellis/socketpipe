@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/dspinellis/socketpipe.svg?branch=master)](https://travis-ci.org/dspinellis/socketpipe)
+[![Coverity Scan Build Status](https://scan.coverity.com/projects/8492/badge.svg)](https://scan.coverity.com/projects/dspinellis-socketpipe)
 
 _Socketpipe_ connects over a TCP/IP socket a _remote command_ specified to a local _input generation command_ and/or a local _output processing command_.  The input and output of the _remote command_ are appropriately redirected so that the remote command's input will come from the local _input generation command_ and the remote command's output will be sent to the local _output processing command_.  The remote command is executed on the machine accessed through the _login command_.  The _socketpipe_ executable should be available through the execution path in the remote machine.  The braces used for delimiting the commands and their arguments should be space-separated and can be nested.  This feature allows you to setup complex and efficient topologies of distributed communicating processes.
 
