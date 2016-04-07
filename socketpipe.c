@@ -172,6 +172,7 @@ get_remote_host_address()
 			fgets(hostname, INET_ADDRSTRLEN, f) == NULL ||
 			pclose(f) != 0)
 		fatal("Error executing [%s] to get our IP address", login_cmd);
+	free(login_cmd);
 	return (hostname);
 }
 
